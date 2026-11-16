@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -173,4 +174,60 @@ func TestAnUpdatedVectorGetsItsNorm(t *testing.T) {
 		t.Fatalf("atteso un documento, ottenuti %v", ms)
 	}
 	circa(t, ms[0].Score, 0.8*20, "similarità col vettore nuovo, per il peso 20")
+}
+
+// La soglia toglie solo chi entra per il vettore: "lontano" (sim 0) resta se
+// lo trova la parola, e non entra se lo porterebbe solo il vettore.
+func TestVectorMinSimilarityFiltersOnlyVectorCandidates(t *testing.T) {
+	s := impostazioniIbride(HybridUnion, 3)
+	s.VectorMinSimilarity = 0.5
+	idx := indiceIbrido(s)
+	q := []float64{1.0, 0.0}
+
+	got, _ := idx.Search("contratto", s, "0", q)
+	if want := []string{"lessicale", "semantico"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("con soglia 0,5 attesi %v, ottenuti %v", want, got)
+	}
+	got, _ = idx.Search("delibera", s, "0", q)
+	if want := []string{"lessicale", "semantico", "lontano"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("il lessicale sotto soglia deve restare: attesi %v, ottenuti %v", want, got)
+	}
+
+	s.VectorMinSimilarity = 0
+	got, _ = idx.Search("contratto", s, "0", q)
+	if len(got) != 3 {
+		t.Fatalf("senza soglia entrano tutti e 3: %v", got)
+	}
+}
+
+func TestVectorMinSimilarityAppliesToVectorModeAndFusions(t *testing.T) {
+	for _, s := range []Settings{impostazioniIbride(HybridVector, 3), impostazioniIbride(HybridUnion, 3)} {
+		if s.HybridMode == HybridUnion {
+			s.FusionMode = FusionRRF
+		}
+		s.VectorMinSimilarity = 0.99
+		got, _ := indiceIbrido(s).Search("bilancio", s, "0", []float64{1.0, 0.0})
+		want := []string{"lessicale"}
+		if s.FusionMode == FusionRRF {
+			want = []string{"lessicale", "lontano"}
+		}
+		if !reflect.DeepEqual(ordinati(got), ordinati(want)) {
+			t.Fatalf("%s/%s con soglia 0,99 attesi %v, ottenuti %v", s.HybridMode, s.FusionMode, want, got)
+		}
+	}
+}
+
+func TestVectorMinSimilarityDoesNotReindex(t *testing.T) {
+	a := impostazioniIbride(HybridUnion, 3)
+	b := a
+	b.VectorMinSimilarity = 0.5
+	if !a.StessoIndice(b) {
+		t.Fatal("cambiare solo la soglia non deve reindicizzare")
+	}
+}
+
+func ordinati(l []string) []string {
+	c := append([]string(nil), l...)
+	sort.Strings(c)
+	return c
 }

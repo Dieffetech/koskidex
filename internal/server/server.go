@@ -111,7 +111,7 @@ func (s *Server) UseEmbeddingCache(path string) error {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// CORS Headers
 	w.Header().Set("Access-Control-Allow-Origin", s.corsOrigin)
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS, DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	if s.corsOrigin != "*" {
 		w.Header().Set("Vary", "Origin")
@@ -176,6 +176,7 @@ func (s *Server) routes() {
 	// Settings
 	s.mux.HandleFunc("GET /indexes/{name}/settings", s.handleGetSettings)
 	s.mux.HandleFunc("PUT /indexes/{name}/settings", s.handleUpdateSettings)
+	s.mux.HandleFunc("PATCH /indexes/{name}/settings", s.handlePatchSettings)
 
 	// Search
 	s.mux.HandleFunc("GET /indexes/{name}/search", s.handleSearch)

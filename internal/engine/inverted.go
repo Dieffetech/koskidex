@@ -403,6 +403,9 @@ type Settings struct {
 	HybridMode string `json:"hybrid_mode"`
 	// VectorTopK is how many documents the vector brings in; zero is 100.
 	VectorTopK int `json:"vector_top_k"`
+	// VectorMinSimilarity drops, among the documents the vector brings in,
+	// those whose cosine similarity to the query is below it; zero keeps all.
+	VectorMinSimilarity float64 `json:"vector_min_similarity"`
 
 	// FusionMode decides how lexical score and vector similarity become one
 	// score. Empty, as up to now: lexical + sim * VectorWeight. FusionRRF and
@@ -632,6 +635,7 @@ func compilaBoosts(boosts []Boost) [][]Filter {
 func (s Settings) StessoIndice(o Settings) bool {
 	s.SynonymGroups, o.SynonymGroups = nil, nil
 	s.Boosts, o.Boosts = nil, nil
+	s.VectorMinSimilarity, o.VectorMinSimilarity = 0, 0
 	s.compilate, o.compilate = nil, nil
 	return reflect.DeepEqual(s, o)
 }

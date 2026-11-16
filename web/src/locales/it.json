@@ -194,7 +194,7 @@
           "tokenizer": "standard tiene la punteggiatura dentro le parole, come d.lgs o 14.01.2026.",
           "normalize": "normalize_dates e normalize_amounts rendono 14/01/2026 e \"14 gennaio 2026\" lo stesso termine, e 1.234,56 uguale a 1234,56.",
           "embedder": "source ollama, model, url, fields, context: calcola _vector all'inserimento e il vettore della query con hybrid=true.",
-          "hybrid": "hybrid_mode union o vector, vector_top_k, fusion_mode rrf o convex, vector_weight (20), fusion_alpha (0.5).",
+          "hybrid": "hybrid_mode union o vector, vector_top_k, vector_min_similarity, fusion_mode rrf o convex, vector_weight (20), fusion_alpha (0.5).",
           "sitemap": "base_url, url_field, changefreq per GET /indexes/{name}/sitemap.xml."
         }
       },
@@ -243,6 +243,7 @@
       "search_post": "Cerca con un body JSON",
       "get_settings": "Leggi le impostazioni dell'indice",
       "put_settings": "Sostituisci le impostazioni dell'indice",
+      "patch_settings": "Cambia solo le impostazioni nel corpo, le altre restano",
       "sitemap": "Sitemap XML dei documenti dell'indice",
       "robots": "robots.txt",
       "health": "Stato, uptime, conteggi e versione, senza autenticazione"

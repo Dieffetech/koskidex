@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `vector_min_similarity` setting: drops, among the `vector_top_k` documents
+  the vector brings in (`hybrid_mode` `union` or `vector`, and the `rrf` and
+  `convex` fusions), those whose cosine similarity to the query is below it.
+  The lexical candidates are never dropped. `0`, the default, keeps them all.
+  Changing it does not reindex.
+- `PATCH /indexes/{name}/settings`: changes only the settings named in the
+  body. Each top-level key replaces that setting whole, `null` resets it, the
+  others keep their value; read and write happen under the same lock, so two
+  concurrent patches do not lose each other. `PUT` still replaces everything.
 - `boosts` setting: a list of `{"filter": "kind=zone", "factor": 1.5}` that
   multiplies the score of the documents the filter matches, after relevance
   and before sorting; the filter has the search `filter` syntax. A factor just
@@ -147,6 +156,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Optimized social share image (`og-image`) from ~5 MB to ~107 KB.
 
 ### Fixed
+- The README showed `stop_words` as a list, which the server refuses with
+  `400`: it is a map of word to `true`.
 - Settings replayed from the WAL at startup now reindex the documents loaded
   from the snapshot, which had stayed indexed with the old settings until the
   next settings update.

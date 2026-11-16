@@ -368,12 +368,26 @@ func (m *Manager) DeleteDocuments(indexName string, rawIDs []interface{}) (delet
 
 // UpdateSettings updates index configuration and re-indexes all documents.
 func (m *Manager) UpdateSettings(indexName string, settings engine.Settings) error {
+	return m.ModificaSettings(indexName, func(engine.Settings) (engine.Settings, error) {
+		return settings, nil
+	})
+}
+
+// ModificaSettings replaces the settings with what modifica derives from the
+// current ones, under the same lock, so that two partial updates do not lose
+// each other. An error from modifica is returned as it is and changes nothing.
+func (m *Manager) ModificaSettings(indexName string, modifica func(engine.Settings) (engine.Settings, error)) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	idx, exists := m.indexes[indexName]
 	if !exists {
 		return ErrIndexNotFound
+	}
+
+	settings, err := modifica(idx.Settings)
+	if err != nil {
+		return err
 	}
 
 	reindex := !idx.Settings.StessoIndice(settings)

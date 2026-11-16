@@ -339,7 +339,7 @@ func (idx *InvertedIndex) SearchScored(query string, settings Settings, fuzzines
 			// too, scored as in the search by vector alone. The lexical ones
 			// keep their re-ranking score, so only who enters changes.
 			if settings.HybridMode == HybridUnion || settings.HybridMode == HybridVector {
-				for _, v := range idx.viciniLocked(queryVector, settings.vettoriK()) {
+				for _, v := range idx.candidatiVettorialiLocked(queryVector, settings) {
 					if _, ok := docMatches[v.id]; !ok {
 						docMatches[v.id] = &SearchMatch{DocID: v.id, Score: v.sim * peso}
 					}

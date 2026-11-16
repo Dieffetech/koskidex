@@ -1512,3 +1512,7 @@ Elasticsearch perché non trovava un documento preciso.
 ## 28/10/2026 - Sinonimi a gruppi, sinonimi per campo e boost (per Korsia)
 
 Tre impostazioni nuove, tutte facoltative e spente di default: `synonym_groups` (sinonimi applicati alla query), `synonym_fields` (i sinonimi valgono solo sui campi elencati) e `boosts` (spinta ai documenti il cui campo corrisponde a un filtro). Con le impostazioni predefinite il ranking non cambia e i numeri della baseline restano identici, quindi niente misura nuova.
+
+## 16/11/2026 - Soglia di similarità per i candidati vettoriali (per Welintouch)
+
+Un'impostazione nuova, facoltativa e spenta di default: `vector_min_similarity`. In `hybrid_mode` `union` o `vector`, e nelle fusioni `rrf` e `convex`, toglie fra i `vector_top_k` documenti portati dal vettore quelli con similarità del coseno sotto la soglia; i candidati lessicali restano tutti. Nata dall'integrazione in Welintouch, che scartava in Laravel i punteggi sotto 11, cioè una similarità sotto 0,55 con la fusione predefinita. A 0 il ranking non cambia e i numeri della baseline restano identici, quindi niente misura nuova.

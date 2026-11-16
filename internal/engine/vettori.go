@@ -64,6 +64,22 @@ func (s Settings) vettoriK() int {
 	return vectorTopKDefault
 }
 
+// candidatiVettorialiLocked returns the documents the vector brings in: the
+// VectorTopK closest, without those below VectorMinSimilarity. The caller
+// holds idx.mu.
+func (idx *InvertedIndex) candidatiVettorialiLocked(q []float64, settings Settings) []vicino {
+	vicini := idx.viciniLocked(q, settings.vettoriK())
+	if settings.VectorMinSimilarity <= 0 {
+		return vicini
+	}
+	for i, v := range vicini {
+		if v.sim < settings.VectorMinSimilarity {
+			return vicini[:i]
+		}
+	}
+	return vicini
+}
+
 // fondiLocked replaces the lexical scores in docMatches with the fusion of
 // the two lists: the lexical candidates by score, and the VectorTopK documents
 // closest to the query vector, which join the candidates. The caller holds
@@ -74,7 +90,7 @@ func (idx *InvertedIndex) fondiLocked(docMatches map[string]*SearchMatch, q []fl
 		lessicali = append(lessicali, vicino{id: id, sim: m.Score})
 	}
 	ordina(lessicali)
-	vettoriali := idx.viciniLocked(q, settings.vettoriK())
+	vettoriali := idx.candidatiVettorialiLocked(q, settings)
 
 	fusi := make(map[string]float64, len(lessicali)+len(vettoriali))
 	switch settings.FusionMode {

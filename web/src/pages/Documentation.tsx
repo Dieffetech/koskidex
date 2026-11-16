@@ -31,6 +31,7 @@ const ENDPOINTS: [string, string, string][] = [
   ["POST", "/indexes/{name}/search", "search_post"],
   ["GET", "/indexes/{name}/settings", "get_settings"],
   ["PUT", "/indexes/{name}/settings", "put_settings"],
+  ["PATCH", "/indexes/{name}/settings", "patch_settings"],
   ["GET", "/indexes/{name}/sitemap.xml", "sitemap"],
   ["GET", "/robots.txt", "robots"],
   ["GET", "/health", "health"],
@@ -72,6 +73,7 @@ const METHOD_STYLE: Record<string, string> = {
   GET: "text-ok",
   POST: "text-link",
   PUT: "text-ink",
+  PATCH: "text-ink",
   DELETE: "text-bad",
 };
 

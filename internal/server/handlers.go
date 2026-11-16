@@ -467,33 +467,82 @@ func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 		sendError(w, http.StatusBadRequest, "Invalid JSON settings")
 		return
 	}
-	if _, err := engine.RequiredTerms(settings.MinimumShouldMatch, 1); err != nil {
+	if err := validaSettings(settings); err != nil {
 		sendError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	s.rispondiSettings(w, s.mgr.UpdateSettings(name, settings))
+}
+
+// handlePatchSettings changes only the settings the body names: each
+// top-level key replaces that setting whole, null puts it back to its zero
+// value, and the others stay as they are.
+func (s *Server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBody)
+	name := r.PathValue("name")
+	if s.blockProtected(w, r, name) {
+		return
+	}
+	var modifiche map[string]json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&modifiche); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid JSON settings")
+		return
+	}
+	err := s.mgr.ModificaSettings(name, func(attuali engine.Settings) (engine.Settings, error) {
+		corrente, err := json.Marshal(attuali)
+		if err != nil {
+			return engine.Settings{}, err
+		}
+		unite := map[string]json.RawMessage{}
+		if err := json.Unmarshal(corrente, &unite); err != nil {
+			return engine.Settings{}, err
+		}
+		for k, v := range modifiche {
+			unite[k] = v
+		}
+		corpo, err := json.Marshal(unite)
+		if err != nil {
+			return engine.Settings{}, err
+		}
+		var nuove engine.Settings
+		if err := json.Unmarshal(corpo, &nuove); err != nil {
+			return engine.Settings{}, richiestaNonValida{errors.New("Invalid JSON settings")}
+		}
+		if err := validaSettings(nuove); err != nil {
+			return engine.Settings{}, richiestaNonValida{err}
+		}
+		return nuove, nil
+	})
+	s.rispondiSettings(w, err)
+}
+
+type richiestaNonValida struct{ error }
+
+func validaSettings(settings engine.Settings) error {
+	if _, err := engine.RequiredTerms(settings.MinimumShouldMatch, 1); err != nil {
+		return err
 	}
 	if err := embedder.Valida(settings.Embedder); err != nil {
-		sendError(w, http.StatusBadRequest, err.Error())
-		return
+		return err
 	}
 	if err := engine.ValidaBoosts(settings.Boosts); err != nil {
-		sendError(w, http.StatusBadRequest, err.Error())
-		return
+		return err
 	}
-	if err := engine.ValidaSinonimi(settings); err != nil {
-		sendError(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	return engine.ValidaSinonimi(settings)
+}
 
-	if err := s.mgr.UpdateSettings(name, settings); err != nil {
-		if err == manager.ErrIndexNotFound {
-			sendError(w, http.StatusNotFound, "Index not found")
-			return
-		}
+func (s *Server) rispondiSettings(w http.ResponseWriter, err error) {
+	var nonValida richiestaNonValida
+	switch {
+	case err == nil:
+		sendJSON(w, http.StatusOK, map[string]string{"message": "Settings updated"})
+	case err == manager.ErrIndexNotFound:
+		sendError(w, http.StatusNotFound, "Index not found")
+	case errors.As(err, &nonValida):
+		sendError(w, http.StatusBadRequest, nonValida.Error())
+	default:
 		sendInternalError(w, "update settings", err)
-		return
 	}
-
-	sendJSON(w, http.StatusOK, map[string]string{"message": "Settings updated"})
 }
 
 type SearchRequest struct {

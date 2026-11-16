@@ -105,7 +105,8 @@ curl "http://localhost:7700/indexes/movies/search?q=matrx"
 | `GET`    | `/indexes/{name}/search?q=`      | Full-text search                              |
 | `POST`   | `/indexes/{name}/search`         | Full-text search (POST body)                  |
 | `GET`    | `/indexes/{name}/settings`       | Get index settings                            |
-| `PUT`    | `/indexes/{name}/settings`       | Update settings (synonyms, stop words, etc.)  |
+| `PUT`    | `/indexes/{name}/settings`       | Replace all settings (synonyms, stop words, etc.) |
+| `PATCH`  | `/indexes/{name}/settings`       | Change only the settings in the body          |
 | `GET`    | `/health`                        | Health check (no auth required)               |
 
 ### Search
@@ -186,7 +187,7 @@ curl -X PUT http://localhost:7700/indexes/movies/settings \
   "synonym_groups": [["iphone", "apple phone", "smartphone"]],
   "searchable_fields": ["title", "description"],
   "displayed_fields": ["title", "price"],
-  "stop_words": ["the", "a", "is"],
+  "stop_words": {"the": true, "a": true, "is": true},
   "field_weights": {"title": 5, "description": 1},
   "typo_tolerance": {
     "enabled": true,
@@ -195,6 +196,30 @@ curl -X PUT http://localhost:7700/indexes/movies/settings \
   }
 }'
 ```
+
+#### Replacing or changing settings
+
+`PUT` replaces the whole settings object: a setting missing from the body goes
+back to its zero value, so sending `{"field_weights": {...}}` alone also clears
+`searchable_fields`, `stop_words` and the rest. To change only some settings,
+send them with `PATCH`: each top-level key in the body replaces that setting
+whole, `null` resets it, and the settings not named keep their value.
+
+```bash
+curl -X PATCH http://localhost:7700/indexes/movies/settings \
+  -H 'Content-Type: application/json' \
+  -d '{"vector_min_similarity": 0.55}'
+```
+
+#### Hybrid candidates
+
+With `hybrid_mode: "union"` the `vector_top_k` documents closest to the query
+vector (100 by default) join the lexical matches; with `"vector"` they are the
+only candidates. `vector_min_similarity` drops, among them, those whose cosine
+similarity to the query is below it, so a query with no close document does not
+bring in 100 unrelated ones. `0`, the default, keeps them all. With the default
+fusion a document brought in by the vector alone scores `similarity * 20`, so a
+threshold of `0.55` is the same as discarding its scores below 11.
 
 #### Searchable fields and weights
 
