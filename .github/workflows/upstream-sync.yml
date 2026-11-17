@@ -98,14 +98,14 @@ jobs:
             git log --reverse --format='- %h %s' upstream/main..HEAD
           } > body.md
 
-          number=$(gh pr list --repo "$UPSTREAM" --head main --state open \
-            --json number,headRepositoryOwner \
-            --jq '[.[] | select(.headRepositoryOwner.login == "Dieffetech")][0].number // empty')
+          # REST, not gh pr list/edit/create: their GraphQL queries also ask
+          # for read:org, and the token only has public_repo.
+          number=$(gh api "repos/$UPSTREAM/pulls?state=open&head=Dieffetech:main" --jq '.[0].number // empty')
 
           if [ -n "$number" ]; then
-            gh pr edit "$number" --repo "$UPSTREAM" --body-file body.md
+            gh api -X PATCH "repos/$UPSTREAM/pulls/$number" -F body=@body.md --jq .html_url
             echo "Pull request #$number refreshed"
           else
-            gh pr create --repo "$UPSTREAM" --base main --head Dieffetech:main \
-              --title "Changes from the Dieffetech fork" --body-file body.md
+            gh api "repos/$UPSTREAM/pulls" -f base=main -f head=Dieffetech:main \
+              -f title="Changes from the Dieffetech fork" -F body=@body.md --jq .html_url
           fi
